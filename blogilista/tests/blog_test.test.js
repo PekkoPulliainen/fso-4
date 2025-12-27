@@ -1,5 +1,5 @@
 const assert = require("node:assert");
-const { test, after, beforeEach } = require("node:test");
+const { test, after, beforeEach, describe } = require("node:test");
 const mongoose = require("mongoose");
 const supertest = require("supertest");
 const app = require("../app");
@@ -8,81 +8,83 @@ const Blog = require("../models/blog");
 
 const api = supertest(app);
 
-beforeEach(async () => {
-  await Blog.deleteMany({});
-  await Blog.insertMany(helper.initialBlogs);
-});
+describe("when there is initially some blogs saved", () => {
+  beforeEach(async () => {
+    await Blog.deleteMany({});
+    await Blog.insertMany(helper.initialBlogs);
+  });
 
-test("blogs are returned as json", async () => {
-  await api
-    .get("/api/blogs")
-    .expect(200)
-    .expect("Content-Type", /application\/json/);
-});
+  test("blogs are returned as json", async () => {
+    await api
+      .get("/api/blogs")
+      .expect(200)
+      .expect("Content-Type", /application\/json/);
+  });
 
-test("all blogs are returned", async () => {
-  const response = await api.get("/api/blogs");
+  test("all blogs are returned", async () => {
+    const response = await api.get("/api/blogs");
 
-  assert.strictEqual(response.body.length, helper.initialBlogs.length);
-});
+    assert.strictEqual(response.body.length, helper.initialBlogs.length);
+  });
 
-test("a specific blog is within the returned blogs", async () => {
-  const response = await api.get("/api/blogs");
+  test("a specific blog is within the returned blogs", async () => {
+    const response = await api.get("/api/blogs");
 
-  const titles = response.body.map((r) => r.title);
+    const titles = response.body.map((r) => r.title);
 
-  assert(titles.includes("Jonne blogi"));
-});
+    assert(titles.includes("Jonne blogi"));
+  });
 
-test("a valid blog can be added", async () => {
-  const newBlog = {
-    title: "Testi",
-    author: "Matti Meikäläinen",
-    url: "testi-url.com",
-    likes: 67,
-  };
+  test("a valid blog can be added", async () => {
+    const newBlog = {
+      title: "Testi",
+      author: "Matti Meikäläinen",
+      url: "testi-url.com",
+      likes: 67,
+    };
 
-  await api
-    .post("/api/blogs")
-    .send(newBlog)
-    .expect(201)
-    .expect("Content-Type", /application\/json/);
+    await api
+      .post("/api/blogs")
+      .send(newBlog)
+      .expect(201)
+      .expect("Content-Type", /application\/json/);
 
-  const blogsAtEnd = await helper.blogsInDb();
-  assert.strictEqual(blogsAtEnd.length, helper.initialBlogs.length + 1);
+    const blogsAtEnd = await helper.blogsInDb();
+    assert.strictEqual(blogsAtEnd.length, helper.initialBlogs.length + 1);
 
-  const titles = blogsAtEnd.map((b) => b.title);
-  assert(titles.includes("Testi"));
-});
+    const titles = blogsAtEnd.map((b) => b.title);
+    assert(titles.includes("Testi"));
+  });
 
-test("a blog can be deleted", async () => {
-  await api.delete("/api/blogs/694adb4636c79f69583d3bc0").expect(204);
-});
+  test("a blog can be deleted", async () => {
+    await api.delete("/api/blogs/694adb4636c79f69583d3bc0").expect(204);
+  });
 
-test("right id for blog identification", async () => {
-  const response = await api.get("/api/blogs");
+  test("right id for blog identification", async () => {
+    const response = await api.get("/api/blogs");
 
-  const blogs = response.body.map((blog) => Object.keys(blog));
+    const blogs = response.body.map((blog) => Object.keys(blog));
 
-  assert(blogs.map((blog) => blog.includes("id")));
-});
+    assert(blogs.map((blog) => blog.includes("id")));
+  });
 
-test("if likes property is missing default to 0", async () => {
-  const newBlog = {
-    title: "Testi",
-    author: "Matti Meikäläinen",
-    url: "testi-url.com",
-  };
+  test("if likes property is missing default to 0", async () => {
+    const newBlog = {
+      title: "Testi",
+      author: "Matti Meikäläinen",
+      url: "testi-url.com",
+    };
 
-  await api
-    .post("/api/blogs")
-    .send(newBlog)
-    .expect(201)
-    .expect("Content-Type", /application\/json/);
+    await api
+      .post("/api/blogs")
+      .send(newBlog)
+      .expect(201)
+      .expect("Content-Type", /application\/json/);
 
-  const blogsAtEnd = await helper.blogsInDb();
-  const blogs = blogsAtEnd.map((blog) => blog);
-  assert(blogs.at(-1).likes === 0);
+    const blogsAtEnd = await helper.blogsInDb();
+    const blogs = blogsAtEnd.map((blog) => blog);
+    assert(blogs.at(-1).likes === 0);
+  });
 });
 
 after(async () => {
